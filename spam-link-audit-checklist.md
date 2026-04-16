@@ -2,11 +2,11 @@
 
 A layered detection playbook for WordPress sites suspected of having injected outbound links (classic pharma / casino / replica / Japanese-keyword / Cyrillic-SEO hacks). Ordered so you can run top-to-bottom or jump straight to the most-likely hit.
 
-Assumes SSH + WP-CLI access. Fleet-friendly — most commands loop cleanly over a list of sites.
+Assumes SSH + WP-CLI access. Fleet-friendly. Most commands loop cleanly over a list of sites.
 
 ---
 
-## 1. Quick triage (5–10 min) — catches ~80% of cases
+## 1. Quick triage. 5-10 minutes, catches ~80% of cases
 
 ### 1a. Cloaked-fetch diff
 
@@ -16,7 +16,7 @@ The single most important test. Most SEO injections only show for Googlebot or f
 # Real browser view
 curl -sA "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" https://SITE/ -o /tmp/ua-browser.html
 
-# Googlebot view — this is where the spam usually lives
+# Googlebot view. This is where the spam usually lives
 curl -sA "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" https://SITE/ -o /tmp/ua-googlebot.html
 
 # Google-referer view
@@ -26,7 +26,7 @@ diff <(grep -oE 'href="[^"]+"' /tmp/ua-browser.html  | sort -u) \
      <(grep -oE 'href="[^"]+"' /tmp/ua-googlebot.html | sort -u)
 ```
 
-If the Googlebot version has links the browser version doesn't, you're done looking — that's the smoking gun. Note the rogue domains and use them as pivot points for the rest of the audit.
+If the Googlebot version has links the browser version doesn't, you're done looking. That's the smoking gun. Note the rogue domains and use them as pivot points for the rest of the audit.
 
 ### 1b. Google SERP check (browser)
 
@@ -43,11 +43,11 @@ Then in **Google Search Console**:
 - Pages → Indexed (look for URLs you didn't create)
 - Coverage → "Indexed, not submitted in sitemap"
 
-Also hit **Bing Webmaster Tools** and **Yandex Webmaster** — Yandex often still indexes spam that Google has already dropped.
+Also hit **Bing Webmaster Tools** and **Yandex Webmaster**. Yandex often still indexes spam that Google has already dropped.
 
 ---
 
-## 2. File system — where injections hide
+## 2. File system: where injections hide
 
 ### 2a. Recently-modified PHP ("what changed lately")
 
@@ -108,7 +108,7 @@ diff -r public_html/wp-content/themes/THEME /path/to/clean/THEME
 
 ### 2g. `.htaccess` cloaking rules
 
-Check **every** `.htaccess`, not just the root — attackers drop cloaking rules in subdirs:
+Check **every** `.htaccess`, not just the root. Attackers drop cloaking rules in subdirs:
 
 ```bash
 find public_html -name ".htaccess" -exec grep -lE "HTTP_USER_AGENT|HTTP_REFERER|RewriteRule.*\[R=301|auto_prepend" {} \;
@@ -130,7 +130,7 @@ find public_html -type f -name "*.php" -newer /tmp/reference_file      # newer t
 
 ---
 
-## 3. Database — the other half of injection attacks
+## 3. Database: the other half of injection attacks
 
 ### 3a. Content scan (spam keywords + common injection markers)
 
@@ -146,7 +146,7 @@ wp db query "SELECT post_id, meta_key, LEFT(meta_value,200) FROM wp_postmeta
 
 ### 3b. `wp_options` payload scan
 
-Hackers love stuffing base64 blobs into serialized options — the option loads autoload, executes, and no file on disk is touched.
+Hackers love stuffing base64 blobs into serialized options. The option loads autoload, executes, and no file on disk is touched.
 
 ```bash
 wp db query "SELECT option_id, option_name, LENGTH(option_value) FROM wp_options
@@ -166,7 +166,7 @@ wp option list --autoload=on --fields=option_name,size_bytes --format=table | so
 
 ### 3d. Cron hijack
 
-Scheduled jobs that **regenerate injections after you clean them** — always find these before starting cleanup or the spam will come back.
+Scheduled jobs that **regenerate injections after you clean them**. Always find these before starting cleanup or the spam will come back.
 
 ```bash
 wp cron event list
@@ -184,7 +184,7 @@ wp db query "SELECT user_id, meta_key, meta_value FROM wp_usermeta
   WHERE meta_key='wp_capabilities' AND meta_value LIKE '%administrator%';"
 ```
 
-Compare counts. If the DB has more admins than `wp user list` returns, you have **invisible users** (hidden via `pre_user_query` filter tampering in a rogue plugin). That's a strong compromise signal — time to look for the plugin doing the hiding.
+Compare counts. If the DB has more admins than `wp user list` returns, you have **invisible users** (hidden via `pre_user_query` filter tampering in a rogue plugin). That's a strong compromise signal. Time to look for the plugin doing the hiding.
 
 ### 3f. Search for specific outbound domains
 
@@ -200,9 +200,9 @@ wp db query "SELECT option_id, option_name FROM wp_options
 
 ---
 
-## 4. Server config — below WordPress
+## 4. Server config: below WordPress
 
-### 4a. Server crons (not WP crons — actual cPanel/system crons)
+### 4a. Server crons (actual cPanel/system crons, not WP crons)
 
 ```bash
 crontab -l                                    # user crontab
@@ -244,7 +244,7 @@ cat ~/.cpanel/datastore/* 2>/dev/null
 
 ---
 
-## 5. Access logs — who's writing to the site
+## 5. Access logs: who is writing to the site
 
 Log path varies. On cPanel it's typically `~/access-logs/SITE` or `/etc/apache2/logs/domlogs/USER`. Set it once and reuse:
 
@@ -286,14 +286,14 @@ awk '{print $7}' $LOG | sort | uniq -c | sort -rn | head -30
 
 Run these in a separate browser tab while the CLI sweep runs:
 
-- **Sucuri SiteCheck** — https://sitecheck.sucuri.net/results/SITE
-- **Google Safe Browsing status** — https://transparencyreport.google.com/safe-browsing/search?url=SITE
-- **VirusTotal URL** — https://www.virustotal.com/gui/home/url
-- **Quttera** — https://quttera.com/
-- **URLscan.io** — `https://urlscan.io/search/#domain:SITE` — shows past scans + extracted outbound links
-- **Wayback Machine** — compare current SERP snippets vs historical snapshots
-- **archive.today** — alternate snapshot source, sometimes catches cloaked content
-- **Wordfence free scan** (if installed) — `wp wordfence scan` via WP-CLI
+- **Sucuri SiteCheck**: https://sitecheck.sucuri.net/results/SITE
+- **Google Safe Browsing status**: https://transparencyreport.google.com/safe-browsing/search?url=SITE
+- **VirusTotal URL**: https://www.virustotal.com/gui/home/url
+- **Quttera**: https://quttera.com/
+- **URLscan.io** - `https://urlscan.io/search/#domain:SITE`. Shows past scans + extracted outbound links
+- **Wayback Machine**: compare current SERP snippets vs historical snapshots
+- **archive.today**. Alternate snapshot source, sometimes catches cloaked content
+- **Wordfence free scan** (if installed) - `wp wordfence scan` via WP-CLI
 
 ---
 
@@ -343,12 +343,12 @@ Same pattern applies to: recent-mtime sweep, `wp core verify-checksums`, rogue-a
 
 ## Priority order (if you're under time pressure)
 
-1. **Cloaked-fetch diff** (Googlebot UA) — fastest path to proof, tells you the attacker's domains
+1. **Cloaked-fetch diff** (Googlebot UA). Fastest path to proof, tells you the attacker's domains
 2. `wp core verify-checksums` + `wp plugin verify-checksums --all`
 3. Recently-modified PHP sweep (`find -mtime -30`)
 4. `wp_options` + `wp_posts` regex scan for spam keywords and base64
 5. `.htaccess` cloaking rule grep
-6. `wp_options` cron inspection — **kill re-injection crons before cleaning**
+6. `wp_options` cron inspection - **kill re-injection crons before cleaning**
 7. Rogue admin + invisible user check
 8. Access log review for POST hits / Googlebot anomalies
 
@@ -359,7 +359,7 @@ Same pattern applies to: recent-mtime sweep, `wp core verify-checksums`, rogue-a
 - **Kill the re-injection vector before cleaning content.** Cleanup is pointless if a cron or mu-plugin rewrites the damage in 10 minutes.
 - **Rotate all secrets** after any confirmed compromise: WP admin passwords, SFTP/SSH, DB, and any API keys stored in `wp_options` (SMTP, Stripe, etc.). Assume the attacker has exfiltrated anything in the DB.
 - **Purge every cache layer** after cleanup: object cache, page cache (Breeze / Rocket / Cloudflare), and ask Google to re-crawl via Search Console's URL inspection tool.
-- **Check Postmark / SMTP logs** for outbound spam mail — SEO injection and mailer abuse are usually the same attacker.
+- **Check Postmark / SMTP logs** for outbound spam mail. SEO injection and mailer abuse are usually the same attacker.
 - **Regenerate `.htaccess` from scratch** rather than trying to diff a tampered one.
 - **Take a forensic copy** (`tar czf /tmp/forensic-$(date +%F).tar.gz public_html`) before deleting anything. Future-you will want the IoCs.
 
